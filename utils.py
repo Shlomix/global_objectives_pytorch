@@ -96,10 +96,11 @@ def weighted_hinge_loss(labels, logits, positive_weights=1.0, negative_weights=1
     """
     Args:
         labels: one-hot representation `Tensor` of shape broadcastable to logits
-        logits: A `Tensor` of shape [N, C] or [N, C, K]
+        logits: A `Tensor` of shape [N, C]
         positive_weights: Scalar or Tensor
         negative_weights: same shape as positive_weights
     Returns:
+        if positive_weights
         3D Tensor of shape [N, C, K], where K is length of positive weights
         or 2D Tensor of shape [N, C]
     """
@@ -126,11 +127,19 @@ def weighted_hinge_loss(labels, logits, positive_weights=1.0, negative_weights=1
             % (positive_weights.size(), negative_weights.size())
         )
 
-    # positive_term: Tensor [N, C] or [N, C, K]
+    if positive_weights_is_tensor and positive_weights.dim() != 1:
+        raise ValueError(
+            "number of dimensions for positive weights must be 1 "
+            "but found {} instead"
+            % (positive_weights.dim())
+        )
+
+
     positive_term = (1 - logits).clamp(min=0) * labels
     negative_term = (1 + logits).clamp(min=0) * (1 - labels)
 
-    if positive_weights_is_tensor and positive_term.dim() == 2:
+    # function output: Tensor [N, C] or [N, C, K]
+    if positive_weights_is_tensor and positive_weights.size(0) > 1:
         return (
             positive_term.unsqueeze(-1) * positive_weights
             + negative_term.unsqueeze(-1) * negative_weights
@@ -190,7 +199,7 @@ def false_postives_upper_bound(labels, logits, weights):
     )
     return weighted_loss_on_negatives.sum(0)
 
-
+# VVVV
 def prepare_labels_weights(logits, targets, weights=None):
     """
     Args:
@@ -206,7 +215,7 @@ def prepare_labels_weights(logits, targets, weights=None):
     N, C = logits.size()
     # Converts targets to one-hot representation. Dim: [N, C]
 
-    _targets = targets.unsqueeze(1)
+    _targets = targets.unsqueeze(-1)
 
     if C > 1:
         labels = FloatTensor(N, C).zero_().scatter(1, _targets.long().data, 1)

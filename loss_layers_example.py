@@ -37,12 +37,11 @@ from losses import AUCPRHingeLoss, PrecisionAtRecall
 #USE_GO_SADDLE_POINT_OPT = False
 
 TARGET_RECALL = 0.98
-TRAIN_ITERATIONS = 3000
-LEARNING_RATE = 0.01
+TRAIN_ITERATIONS = 4000
+LEARNING_RATE = 0.05
 GO_DUAL_RATE_FACTOR = 15.0
-NUM_CHECKPOINTS = 20
+NUM_CHECKPOINTS = 10
 
-USE_GLOBAL_OBJECTIVES = False
 
 EXPERIMENT_DATA_CONFIG = {
     'positives_centers': [[0, 1.0], [1, -0.5]],
@@ -128,14 +127,14 @@ def train_model(data, use_global_objectives):
 
     device = torch.device('cuda')
 
-    w = torch.tensor([1.0, 1.0],  requires_grad=True, device=device)
+    w = torch.tensor([0.0, -1.0],  requires_grad=True, device=device)
     b = torch.tensor([0.0], requires_grad=True, device=device)
 
     x = torch.tensor(data['train_data'], requires_grad=False, device=device).float().cuda()
     labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float().cuda()
 
     params = [w,b]
-    if USE_GLOBAL_OBJECTIVES:
+    if use_global_objectives:
         criterion = PrecisionAtRecall(target_recall=TARGET_RECALL, num_classes=1)
         params += list(criterion.parameters())
     else:
@@ -145,7 +144,7 @@ def train_model(data, use_global_objectives):
 
     params = [w,b] + list(criterion.parameters())
     optimizer = optim.SGD(params, lr=LEARNING_RATE)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
+    #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.5)
 
 
     checkpoint_step = TRAIN_ITERATIONS // NUM_CHECKPOINTS
@@ -164,7 +163,7 @@ def train_model(data, use_global_objectives):
         # perform a backward pass, and update the weights.
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        #scheduler.step()
         #print(t, loss.item())
 
         if t % checkpoint_step == 0:
@@ -185,16 +184,50 @@ def train_model(data, use_global_objectives):
         np.dot(data['eval_data'], w_) + b_,
         data['eval_labels'], TARGET_RECALL)
 
-    return precision
+    return precision, w_, b_
 
 
 def main(unused_argv):
-  del unused_argv
-  experiment_data = create_training_and_eval_data_for_experiment(
-      **EXPERIMENT_DATA_CONFIG)
+    del unused_argv
+    experiment_data = create_training_and_eval_data_for_experiment(
+        **EXPERIMENT_DATA_CONFIG)
 
-  cross_entropy_loss_precision = train_model(experiment_data, USE_GLOBAL_OBJECTIVES)
-  print('cross_entropy precision at requested recall is {}'.format(cross_entropy_loss_precision))
+    precision_1, w1, b1 = train_model(experiment_data, use_global_objectives=False)
+    print('cross_entropy precision at requested recall is {}'.format(precision_1))
+
+    precision_2, w2, b2 = train_model(experiment_data, use_global_objectives=True)
+    print('cross_entropy precision at requested recall is {}'.format(precision_2))
+
+
+    import matplotlib.pyplot as plt
+
+
+    labels = ["negative_train", "positive_train", "negative_test", "positive_test"]
+    colors = ["navy", "firebrick", "blue", "red"]
+    markers = ['-', '+', '-', '+']
+
+    x = {}
+    x[labels[0]] = experiment_data["train_data"][experiment_data["train_labels"] == 0, :]
+    x[labels[1]] = experiment_data["train_data"][experiment_data["train_labels"] == 1, :]
+    x[labels[2]] = experiment_data["eval_data"][experiment_data["eval_labels"] == 0, :]
+    x[labels[3]] = experiment_data["eval_data"][experiment_data["eval_labels"] == 1, :]
+
+    for l, c, m in zip(labels, colors, markers):
+        plt.scatter(x[l][:,0], x[l][:, 1], color=c, label=l)
+
+    xx = np.linspace(-2., 2., 30)
+
+    plt.plot(xx, -xx*w1[0]/w1[1] - b1/w1[1], color='g', label="Cross Entropy")
+    plt.xlim(-2, 2)
+    plt.ylim(-2, 2)
+
+    plt.plot(xx, -xx*w2[0]/w2[1] - b2/w2[1], color='m', label="P@R 0.98")
+    plt.xlim(-2, 2)
+    plt.ylim(-2, 2)
+
+
+    plt.legend()
+    plt.show()
 
 
 if __name__ == '__main__':
