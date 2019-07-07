@@ -142,7 +142,7 @@ def train_model(data, use_global_objectives):
 
     #criterion = PrecisionAtRecall(target_recall=TARGET_RECALL, num_classes=1)
 
-    params = [w,b] + list(criterion.parameters())
+    #params = [w,b] + list(criterion.parameters())
     optimizer = optim.SGD(params, lr=LEARNING_RATE)
     #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.5)
 
@@ -218,17 +218,13 @@ def main(unused_argv):
     xx = np.linspace(-2., 2., 30)
 
     plt.plot(xx, -xx*w1[0]/w1[1] - b1/w1[1], color='g', label="Cross Entropy")
-    plt.xlim(-2, 2)
-    plt.ylim(-2, 2)
-
     plt.plot(xx, -xx*w2[0]/w2[1] - b2/w2[1], color='m', label="P@R 0.98")
-    plt.xlim(-2, 2)
-    plt.ylim(-2, 2)
-
-
+    plt.xlim(-1, 1.7)
+    plt.ylim(-1.5, 2)
+    plt.grid()
     plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
-  main("run")
+    main("run")
