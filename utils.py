@@ -134,7 +134,6 @@ def weighted_hinge_loss(labels, logits, positive_weights=1.0, negative_weights=1
             % (positive_weights.dim())
         )
 
-
     positive_term = (1 - logits).clamp(min=0) * labels
     negative_term = (1 + logits).clamp(min=0) * (1 - labels)
 
