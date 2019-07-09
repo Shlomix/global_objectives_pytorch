@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import utils_new as utils
-from utils_new import FloatTensor
+import global_objectives.utils as utils
+from global_objectives.utils import FloatTensor
 
 
 class BaseLoss(nn.Module):
@@ -174,19 +174,19 @@ class BaseLoss(nn.Module):
         positive_term = (1.0 - logits).clamp(min=0) * labels
         negative_term = (1.0 + logits).clamp(min=0) * (1.0 - labels)
 
-        if positive_weights.dim() in [1, 2]:
-            return (
-                    positive_term * positive_weights
-                    + negative_term * negative_weights
-            )
-
-        else:
+        if positive_weights.dim() not in [1, 2]:
             raise ValueError(
                 "number of dimensions for "
                 "positive and negative weights"
                 "must be 2 but found {} instead."
-                .format(positive_weights.dim())
+                    .format(positive_weights.dim())
             )
+
+        return (
+                positive_term * positive_weights
+                + negative_term * negative_weights
+        )
+
 
     @staticmethod
     def build_anchors(target_range, num_anchors, target_type='target'):

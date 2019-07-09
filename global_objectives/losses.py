@@ -1,6 +1,5 @@
 import torch.nn as nn
-from base import BaseLoss
-import utils_new as utils
+from global_objectives.base import BaseLoss
 
 
 class AUCROCLoss(BaseLoss):
@@ -82,7 +81,7 @@ class TPRFPRLoss(BaseLoss):
     def __init__(self, target_fpr, num_classes=1):
         nn.Module.__init__(self)
         super(TPRFPRLoss, self).__init__(
-            auc=True,
+            auc=False,
             target_type="fpr",
             target=target_fpr,
             num_classes=num_classes,
