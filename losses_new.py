@@ -9,22 +9,17 @@ class AUCROCLoss(BaseLoss):
                  num_classes=1, num_anchors=20):
         nn.Module.__init__(self)
         super(AUCROCLoss, self).__init__(
-            auc=True, num_classes=num_classes,
+            auc=True,
+            target_type="fp",
+            target=(fp_range_lower, fp_range_upper),
+            num_classes=num_classes,
             num_anchors=num_anchors
         )
 
-        self.fp_range = (
-            fp_range_lower,
-            fp_range_upper,
-        )
-
-        self.fp_values, self.delta = utils.build_anchors(
-            self.fp_range, self.num_anchors
-        )
 
     def calc_lambda_term(self, lambdas, class_priors):
         lambda_term = (1.0 - class_priors).unsqueeze(-1) * (
-                lambdas * self.fp_values
+                lambdas * self.target_values
         )
         return lambda_term
 
@@ -40,28 +35,22 @@ class AUCPRLoss(BaseLoss):
                  num_classes=1, num_anchors=20):
         nn.Module.__init__(self)
         super(AUCPRLoss, self).__init__(
-            auc=True, num_classes=num_classes,
+            auc=True,
+            target_type="precision",
+            target=(precision_range_lower, precision_range_upper),
+            num_classes=num_classes,
             num_anchors=num_anchors
-        )
-
-        self.fp_range = (
-            precision_range_lower,
-            precision_range_upper,
-        )
-
-        self.precision_values, self.delta = utils.build_anchors(
-            self.fp_range, self.num_anchors
         )
 
     def calc_lambda_term(self, lambdas, class_priors):
         lambda_term = class_priors.unsqueeze(-1) * (
-            lambdas * (1.0 - self.precision_values)
+            lambdas * (1.0 - self.target_values)
         )
         return lambda_term
 
     def calc_pos_neg_weights(self, lambdas):
-        pos_weight = 1.0 + lambdas * (1.0 - self.precision_values)
-        neg_weight = lambdas * self.precision_values
+        pos_weight = 1.0 + lambdas * (1.0 - self.target_values)
+        neg_weight = lambdas * self.target_values
         return pos_weight, neg_weight
 
 
@@ -70,14 +59,15 @@ class PRLoss(BaseLoss):
     def __init__(self, target_recall, num_classes=1):
         nn.Module.__init__(self)
         super(PRLoss, self).__init__(
-            auc=False, num_classes=num_classes,
-            num_anchors=1
+            auc=False,
+            target_type="recall",
+            target=target_recall,
+            num_classes=num_classes,
         )
-        self.target_recall = target_recall
 
     def calc_lambda_term(self, lambdas, class_priors):
         lambda_term = class_priors * (
-            lambdas * (self.target_recall - 1.0)
+            lambdas * (self.target - 1.0)
         )
         return lambda_term
 
@@ -92,18 +82,18 @@ class TPRFPRLoss(BaseLoss):
     def __init__(self, target_fpr, num_classes=1):
         nn.Module.__init__(self)
         super(TPRFPRLoss, self).__init__(
-            auc=False, num_classes=num_classes,
-            num_anchors=1
+            auc=True,
+            target_type="fpr",
+            target=target_fpr,
+            num_classes=num_classes,
         )
-        self.target_fpr = target_fpr
 
     def calc_lambda_term(self, lambdas, class_priors):
         lambda_term = (1.0 - class_priors) * (
-            lambdas * self.target_fpr
+            lambdas * self.target
         )
         return lambda_term
 
-    @staticmethod
     def calc_pos_neg_weights(self, lambdas):
         pos_weight = 1.0
         neg_weight = lambdas

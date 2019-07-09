@@ -27,7 +27,7 @@ from sklearn.metrics import precision_score
 import torch
 import torch.optim as optim
 
-from losses_new import PRLoss
+from losses_new import PRLoss, AUCPRLoss
 
 #import loss_layers
 
@@ -135,7 +135,7 @@ def train_model(data, use_global_objectives):
 
     params = [w,b]
     if use_global_objectives:
-        criterion = PRLoss(target_recall=TARGET_RECALL, num_classes=1)
+        criterion = PRLoss(num_classes=1, target_recall=TARGET_RECALL)
         params += list(criterion.parameters())
     else:
         criterion = torch.nn.BCEWithLogitsLoss()
@@ -192,12 +192,13 @@ def main(unused_argv):
     experiment_data = create_training_and_eval_data_for_experiment(
         **EXPERIMENT_DATA_CONFIG)
 
-    precision_1, w1, b1 = train_model(experiment_data, use_global_objectives=False)
-    print('cross_entropy precision at requested recall is {}'.format(precision_1))
+    #precision_1, w1, b1 = train_model(experiment_data, use_global_objectives=False)
+    #print('cross_entropy precision at requested recall is {}'.format(precision_1))
 
     precision_2, w2, b2 = train_model(experiment_data, use_global_objectives=True)
     print('cross_entropy precision at requested recall is {}'.format(precision_2))
 
+"""""""""
     import matplotlib.pyplot as plt
 
 
@@ -224,6 +225,7 @@ def main(unused_argv):
     plt.legend()
     plt.show()
 
+"""""""""
 
 if __name__ == '__main__':
     main("run")

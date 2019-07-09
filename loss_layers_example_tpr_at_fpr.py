@@ -27,7 +27,7 @@ from sklearn.metrics import recall_score, confusion_matrix
 import torch
 import torch.optim as optim
 
-from losses import TruePositiveAtFalsePositive
+from losses_new import TPRFPRLoss
 
 #import loss_layers
 
@@ -134,7 +134,7 @@ def train_model(data, use_global_objectives):
 
     params = [w,b]
     if use_global_objectives:
-        criterion = TruePositiveAtFalsePositive(target_fpr=TARGET_FPR, num_classes=1)
+        criterion = TPRFPRLoss(target_fpr=TARGET_FPR, num_classes=1)
         params += list(criterion.parameters())
     else:
         criterion = torch.nn.BCEWithLogitsLoss()
