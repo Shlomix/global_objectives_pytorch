@@ -48,7 +48,7 @@ def train_model(data, use_global_objectives,
                 at_target_rate
             )
 
-            print('Loss = {}, {} = {} @ {} = {}'.format(
+            print('Loss = {}, {} = {:.2f} @ {} = {:.2f}'.format(
                 loss.data, obj_type, obj_rate,
                 at_target_type, target_rate))
 

@@ -33,7 +33,7 @@ def main(unused_argv):
                                          lr=LEARNING_RATE,
                                          num_checkpoints=NUM_CHECKPOINTS)
 
-    print('cross_entropy_loss tpr at requested fpr is {}@{}'.
+    print('cross_entropy_loss tpr at requested fpr is {:.2f}@{:.2f}\n'.
           format(tpr_1, fpr_1)
           )
 
@@ -49,7 +49,7 @@ def main(unused_argv):
                                          num_checkpoints=NUM_CHECKPOINTS)
 
     print('true_positives_at_false_positives_loss tpr '
-          'at requested fpr is {}@{}'.
+          'at requested fpr is {:.2f}@{:.2f}'.
           format(tpr_2, fpr_2)
           )
 
