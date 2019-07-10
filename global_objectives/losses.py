@@ -15,7 +15,6 @@ class AUCROCLoss(BaseLoss):
             num_anchors=num_anchors
         )
 
-
     def calc_lambda_term(self, lambdas, class_priors):
         lambda_term = (1.0 - class_priors).unsqueeze(-1) * (
                 lambdas * self.target_values
@@ -48,7 +47,7 @@ class AUCPRLoss(BaseLoss):
         return lambda_term
 
     def calc_pos_neg_weights(self, lambdas):
-        pos_weight = 1.0 + lambdas * (1.0 - self.target_values)
+        pos_weight = (1.0 + lambdas) * (1.0 - self.target_values)
         neg_weight = lambdas * self.target_values
         return pos_weight, neg_weight
 
@@ -65,7 +64,7 @@ class PRLoss(BaseLoss):
         )
 
     def calc_lambda_term(self, lambdas, class_priors):
-        lambda_term = class_priors * (
+        lambda_term = -class_priors * (
             lambdas * (self.target - 1.0)
         )
         return lambda_term

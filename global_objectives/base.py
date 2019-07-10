@@ -96,7 +96,7 @@ class BaseLoss(nn.Module):
                 negative_weights=negative_weights,
             )
 
-            per_anchor_loss = weights.unsqueeze(-1) * hinge_loss + lambda_term
+            per_anchor_loss = weights.unsqueeze(-1) * hinge_loss - lambda_term
             # loss = per_label_loss
             loss = per_anchor_loss.sum(2) * self.delta
             loss /= (self.target_range[1] - self.target_range[0] - self.delta)
@@ -109,7 +109,7 @@ class BaseLoss(nn.Module):
                 positive_weights=positive_weights,
                 negative_weights=negative_weights,
             )
-            loss = weights * hinge_loss + lambda_term
+            loss = weights * hinge_loss - lambda_term
 
         if not reduce:
             return loss

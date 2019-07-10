@@ -16,8 +16,8 @@ def train_model(data, use_global_objectives,
 
     w = torch.tensor([1.0, 1.0],  requires_grad=True, device=device)
     b = torch.tensor([0.0], requires_grad=True, device=device)
-    x = torch.tensor(data['train_data'], requires_grad=False, device=device).float()
-    labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float()
+    x = torch.tensor(data['train_data'], requires_grad=False, device=device).float().cuda()
+    labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float().cuda()
 
     params = [w, b]
     if not use_global_objectives:
@@ -25,7 +25,7 @@ def train_model(data, use_global_objectives,
     else:
         params += list(criterion.parameters())
 
-    optimizer = optim.SGD(params, lr=lr)
+    optimizer = optim.Adam(params, lr=lr)
     checkpoint_step = train_iteration // num_checkpoints
 
     for t in range(train_iteration):
@@ -48,7 +48,7 @@ def train_model(data, use_global_objectives,
                 at_target_rate
             )
 
-            print('Loss = {}, {} = {:.2f} @ {} = {:.2f}'.format(
+            print('Loss = {}, {} = {:.3f} @ {} = {:.3f}'.format(
                 loss.data, obj_type, obj_rate,
                 at_target_type, target_rate))
 

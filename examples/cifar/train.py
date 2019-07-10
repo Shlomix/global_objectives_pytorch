@@ -1,6 +1,11 @@
+import sys
+sys.path.insert(0, "/home/shlomi/global_objectives_pytorch")
+
+
 import os
 import numpy as np
 import torch
+import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
@@ -43,18 +48,18 @@ test_set = torchvision.datasets.CIFAR10(root='./data', train=False,
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=512,
                                           shuffle=False, num_workers=2)
 
-net = vgg.VGG11(num_classes=10)
+net = vgg.VGG16(num_classes=10)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-criterion = AUCPRLoss(num_classes=10)
-
+#criterion = nn.CrossEntropyLoss()
+criterion = AUCPRLoss(num_classes=10, num_anchors=30)
 
 params = list(net.parameters()) + list(criterion.parameters())
 
-optimizer_net = optim.SGD(params, lr=1e-2)
-scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=5, gamma=0.5)
+optimizer_net = optim.SGD(params, lr=1e-1)
+scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=15, gamma=0.5)
 
 
 net = net.to(device)

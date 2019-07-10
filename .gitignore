@@ -1,3 +1,4 @@
 /examples/cifar/data
 .idea/
 __pycache__/
+/data
