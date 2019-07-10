@@ -25,7 +25,7 @@ def main(unused_argv):
     experiment_data = create_training_and_eval_data_for_experiment(
         **EXPERIMENT_DATA_CONFIG)
 
-    tpr_1, fpr_1, w_1, b_1 = train_model(data=experiment_data,
+    tpr_1, fpr_1, w_1, b_1, threshold = train_model(data=experiment_data,
                                          use_global_objectives=False,
                                          metric_func=precision_at_recall,
                                          at_target_rate=TARGET_RECALL,
@@ -39,7 +39,7 @@ def main(unused_argv):
           )
 
     criterion = PRLoss(target_recall=TARGET_RECALL, num_classes=1)
-    tpr_2, fpr_2, w_2, b_2 = train_model(data=experiment_data,
+    tpr_2, fpr_2, w_2, b_2, _ = train_model(data=experiment_data,
                                          use_global_objectives=True,
                                          criterion=criterion,
                                          metric_func=precision_at_recall,
@@ -56,6 +56,7 @@ def main(unused_argv):
 
     plot_results(data=experiment_data,
                  w_1=w_1, b_1=b_1,
+                 threshold=threshold,
                  w_2=w_2, b_2=b_2,
                  obj_type="P",
                  at_target_type="R",

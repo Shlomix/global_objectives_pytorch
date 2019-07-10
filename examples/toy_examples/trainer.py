@@ -16,8 +16,8 @@ def train_model(data, use_global_objectives,
 
     w = torch.tensor([1.0, 1.0],  requires_grad=True, device=device)
     b = torch.tensor([0.0], requires_grad=True, device=device)
-    x = torch.tensor(data['train_data'], requires_grad=False, device=device).float().cuda()
-    labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float().cuda()
+    x = torch.tensor(data['train_data'], requires_grad=False, device=device).float()
+    labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float()
 
     params = [w, b]
     if not use_global_objectives:
@@ -42,7 +42,7 @@ def train_model(data, use_global_objectives,
         if t % checkpoint_step == 0:
             w_numpy = w.cpu().detach().numpy()
             b_numpy = b.cpu().detach().numpy()
-            obj_rate, target_rate = metric_func(
+            obj_rate, target_rate, _ = metric_func(
                 np.dot(data['train_data'], w_numpy) + b_numpy,
                 data['train_labels'],
                 at_target_rate
@@ -55,10 +55,10 @@ def train_model(data, use_global_objectives,
     w_numpy = w.cpu().detach().numpy()
     b_numpy = b.cpu().detach().numpy()
 
-    obj_rate, target_rate = metric_func(
+    obj_rate, target_rate, threshold = metric_func(
         np.dot(data['eval_data'], w_numpy) + b_numpy,
         data['eval_labels'],
         at_target_rate
     )
 
-    return obj_rate, target_rate, w_numpy, b_numpy
+    return obj_rate, target_rate, w_numpy, b_numpy, threshold

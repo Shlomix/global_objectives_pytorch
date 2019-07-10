@@ -46,17 +46,23 @@ def true_positive_at_false_positive(scores, labels, target_fpr):
     negative_scores = scores[labels == 0.0]
     threshold = np.percentile(negative_scores, 100 - 100 * target_fpr)
     predicted = scores >= threshold
-    return recall_score(labels, predicted), (negative_scores >= threshold).sum() / negative_scores.size
+    return recall_score(labels, predicted), \
+           (negative_scores >= threshold).sum() / negative_scores.size, \
+           threshold
 
 
 def precision_at_recall(scores, labels, target_recall):
     positive_scores = scores[labels == 1.0]
     threshold = np.percentile(positive_scores, 100 - target_recall*100)
     predicted = scores >= threshold
-    return precision_score(labels, predicted), recall_score(labels, predicted)
+    return precision_score(labels, predicted), \
+           recall_score(labels, predicted), \
+           threshold
 
 
-def plot_results(data, w_1, b_1, w_2, b_2,
+def plot_results(data,
+                 w_1, b_1, threshold,
+                 w_2, b_2,
                  obj_type, at_target_type,
                  at_target_rate):
 
@@ -80,9 +86,14 @@ def plot_results(data, w_1, b_1, w_2, b_2,
     plt.plot(xx, -xx*w_1[0]/w_1[1] - b_1/w_1[1],
              color='purple', label="Cross Entropy"
              )
+
+    plt.plot(xx, -xx*w_1[0]/w_1[1] - (b_1 - threshold)/w_1[1],
+             color='green', label="Cross Entropy @ {}{}".
+             format(at_target_type, at_target_rate)
+             )
     plt.plot(xx, -xx*w_2[0]/w_2[1] - b_2/w_2[1],
-             color='k', label="{}@{}{}".format(
-            obj_type, at_target_type, at_target_rate)
+             color='k', label="{}@{}{}".
+             format(obj_type, at_target_type, at_target_rate)
              )
     plt.xlim(-1, 1.7)
     plt.ylim(-1.5, 2)
