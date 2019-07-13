@@ -7,91 +7,81 @@ from global_objectives.utils import FloatTensor
 
 class BaseLoss(nn.Module):
 
-    def __init__(self, target_type,
-                 target=None, num_classes=1,
-                 auc=False, num_anchors=1):
-
+    def __init__(self,
+                 target,
+                 target_type,
+                 num_labels,
+                 dual_factor=0.1,
+                 is_auc=False,
+                 num_anchors=None):
         nn.Module.__init__(self)
 
         self.target_type = target_type
-        self.num_classes = num_classes
-        self.auc = auc
-        self.num_anchors = num_anchors
+        self.num_labels = num_labels
+        self.dual_factor = dual_factor
+        self.is_auc = is_auc
 
-        if self.auc:
-
-            if target is None:
-                self.target_range = (0.0, 1.0)
-
+        if self.is_auc:
+            self.num_anchors = num_anchors
             self.target_range = target
-
             self.target_values, self.delta = BaseLoss.build_anchors(
                 self.target_range, self.num_anchors
             )
-
             self.biases = nn.Parameter(
-                FloatTensor(self.num_classes, self.num_anchors).zero_()
+                FloatTensor(self.num_labels, self.num_anchors).zero_()
             )
             self.lambdas = nn.Parameter(
-                FloatTensor(self.num_classes, self.num_anchors).data.fill_(
+                FloatTensor(self.num_labels, self.num_anchors).data.fill_(
                     1.0
                 )
             )
-
         else:
-            if target is None:
-                raise ValueError("{} should be directly specified".format(target_type))
-
-            elif target < 0.0 or target > 1.0:
-                raise ValueError("{} must be in the range [0.0,1.0]".format(target_type))
-
             self.target = target
-
             self.biases = nn.Parameter(
-                FloatTensor(self.num_classes).zero_()
+                FloatTensor(self.num_labels).zero_()
             )
             self.lambdas = nn.Parameter(
-                FloatTensor(self.num_classes).data.fill_(
+                FloatTensor(self.num_labels).data.fill_(
                     1.0
                 )
             )
 
-    def forward(self, logits, targets,
-                reduce=True, size_average=True,
+    def forward(self,
+                logits,
+                targets,
+                reduce=True,
+                size_average=True,
                 weights=None):
 
         if logits.dim() == 1:
             logits = logits.unsqueeze(-1)
 
         N, C = logits.size()
-
-        if self.num_classes != C:
+        if self.num_labels != C:
             raise ValueError(
-                "num classes is %d while logits width is %d" % (self.num_classes, C)
+                "num classes is %d while logits width is %d" % (self.num_labels, C)
             )
-
         labels = utils.one_hot_encoding(logits, targets)
 
         if weights is None:
             weights = FloatTensor(N).data.fill_(1.0)
-
         if weights.dim() == 1:
             weights.unsqueeze_(-1)
 
         # class_priors' shape = [C]
         class_priors = BaseLoss.calc_class_priors(labels, weights=weights)
         # lambdas' shape = [C, K] or [C]
-        lambdas = utils.lagrange_multiplier(self.lambdas)
+        lambdas = utils.lagrange_multiplier(self.lambdas, self.dual_factor)
         # positive(negative)_weights' shape = [C, K]
         positive_weights, negative_weights = self.calc_pos_neg_weights(lambdas)
         # lambda_term's shape = [C, K] (auc) or [C]
         lambda_term = self.calc_lambda_term(lambdas, class_priors)
 
-        if self.auc:
+        if self.is_auc:
             # hinge_loss's shape = [N,C,K]
             hinge_loss = self.calc_hinge_loss(
                 labels.unsqueeze(-1),
-                logits.unsqueeze(-1),
+                logits.unsqueeze(-1) - self.biases,
                 positive_weights=positive_weights,
                 negative_weights=negative_weights,
             )
@@ -100,12 +90,11 @@ class BaseLoss(nn.Module):
             # loss = per_label_loss
             loss = per_anchor_loss.sum(2) * self.delta
             loss /= (self.target_range[1] - self.target_range[0] - self.delta)
-
         else:
             # hinge_loss's shape = [N,C]
             hinge_loss = BaseLoss.calc_hinge_loss(
                 labels,
-                logits,
+                logits - self.biases,
                 positive_weights=positive_weights,
                 negative_weights=negative_weights,
             )
@@ -126,7 +115,8 @@ class BaseLoss(nn.Module):
 
     @staticmethod
     def calc_class_priors(labels,
-                          class_priors=None, weights=None,
+                          class_priors=None,
+                          weights=None,
                           positive_pseudocount=1.0,
                           negative_pseudocount=1.0):
 
@@ -139,7 +129,6 @@ class BaseLoss(nn.Module):
             weighted_label_counts + positive_pseudocount,
             weight_sum + positive_pseudocount + negative_pseudocount,
         )
-
         return class_priors
 
     @staticmethod
@@ -161,7 +150,7 @@ class BaseLoss(nn.Module):
         elif torch.is_tensor(negative_weights) and np.isscalar(positive_weights):
             positive_weights = FloatTensor(negative_weights.shape).fill_(positive_weights)
 
-        # if both are tensors to begin with.
+        # If both are tensors to begin with.
         elif positive_weights.size() != negative_weights.size():
             raise ValueError(
                 "shape of positive_weights and negative_weights "
@@ -206,8 +195,8 @@ class BaseLoss(nn.Module):
 
         target_values = np.linspace(start=target_range[0],
                                     stop=target_range[1],
-                                    num=num_anchors + 1)[1:]
+                                    num=num_anchors + 2)[1:-1]
 
-        delta = (target_values[1] - target_values[0]) / num_anchors
+        delta = (target_values[0] - target_range[0])
 
         return FloatTensor(target_values), delta

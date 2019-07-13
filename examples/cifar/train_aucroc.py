@@ -1,6 +1,7 @@
-import sys
-sys.path.insert(0, "/home/shlomi/global_objectives_pytorch")
+import os, sys
 
+path = os.path.abspath(__file__ + "/../../../")
+sys.path.insert(0, path)
 
 import os
 import numpy as np
@@ -10,13 +11,14 @@ import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from sklearn.metrics import average_precision_score
-from global_objectives.losses import AUCPRLoss
+from sklearn.metrics import roc_auc_score
+from global_objectives.losses import AUCROCLoss
+from global_objectives.utils import one_hot_encoding
 from examples.cifar.networks import vgg
 from examples.cifar.misc import progress_bar
 from sklearn.preprocessing import label_binarize
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 best_acc = 0
 
@@ -48,18 +50,28 @@ test_set = torchvision.datasets.CIFAR10(root='./data', train=False,
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=512,
                                           shuffle=False, num_workers=2)
 
+train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                         download=True, transform=test_transforms)
+
+train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=256,
+                                           shuffle=False, num_workers=2)
+
 net = vgg.VGG16(num_classes=10)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+use_ce = False
 
-#criterion = nn.CrossEntropyLoss()
-criterion = AUCPRLoss(num_classes=10, num_anchors=30)
+
+if use_ce:
+    criterion = nn.BCEWithLogitsLoss()
+else:
+    criterion = AUCROCLoss(num_labels=10, num_anchors=2)
 
 params = list(net.parameters()) + list(criterion.parameters())
 
 optimizer_net = optim.SGD(params, lr=1e-1)
-scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=15, gamma=0.5)
+scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=30, gamma=0.5)
 
 
 net = net.to(device)
@@ -74,63 +86,55 @@ if device == 'cuda':
 def train(epoch):
     print('\nTrain Epoch: %d' % epoch)
     net.train()
+    criterion.train()
     train_loss = 0
 
     scheduler_net.step()
 
-    outputs_epoch = np.array([])
-    targets_epoch = np.array([])
     for batch_idx, (inputs, targets) in enumerate(train_loader):
 
         targets = targets.long()
 
         inputs, targets = inputs.to(device), targets.to(device)
 
+
+
         optimizer_net.zero_grad()
         outputs = net(inputs).squeeze()
+        if use_ce:
+            targets = one_hot_encoding(logits=outputs, targets=targets)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer_net.step()
-
-        if outputs_epoch.size != 0:
-            outputs_epoch = np.concatenate((outputs_epoch, outputs.detach().cpu().numpy()))
-            targets_epoch = np.concatenate((targets_epoch, targets.detach().cpu().numpy()))
-        else:
-            outputs_epoch = outputs.detach().cpu().numpy()
-            targets_epoch = targets.detach().cpu().numpy()
-
 
         train_loss += loss.item()
 
         targets_ = label_binarize(targets.cpu().numpy(), classes=list(range(10)))
 
-        map = average_precision_score(targets_, outputs.detach().cpu().numpy())
-        progress_bar(batch_idx, len(train_loader), 'Loss: %.3f, MAP: %.3f'
-                     % (train_loss / (len(train_loader)), map))
-
-    targets_ = label_binarize(targets_epoch, classes=list(range(10)))
-    map = average_precision_score(targets_, outputs_epoch)
-    progress_bar(len(train_loader), len(train_loader), 'Loss: %.3f, MAP: %.3f'
-                 % (train_loss / (len(train_loader)), map))
-    return map
+        roc = roc_auc_score(targets_, outputs.detach().cpu().numpy())
+        progress_bar(batch_idx, len(train_loader), 'Loss: %.3f, ROC: %.3f'
+                     % (train_loss / (len(train_loader)), roc))
 
 
-def test(epoch):
+def test(epoch, loader, label):
     global best_map
 
-    print('\nTest Epoch: %d' % epoch)
+    print('\nTesting {} Epoch: {}'.format(label, epoch))
     net.eval()
     criterion.eval()
     test_loss = 0
     outputs_epoch = np.array([])
     targets_epoch = np.array([])
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(test_loader):
+        for batch_idx, (inputs, targets) in enumerate(loader):
             targets = targets.long()
 
             inputs, targets = inputs.to(device), targets.to(device)
 
             outputs = net(inputs).squeeze()
+            if use_ce:
+                targets = one_hot_encoding(logits=outputs, targets=targets)
+
             loss = criterion(outputs, targets)
 
             if outputs_epoch.size != 0:
@@ -143,18 +147,19 @@ def test(epoch):
             test_loss += loss.item()
 
             targets_ = label_binarize(targets.cpu().numpy(), classes=list(range(10)))
-            map = average_precision_score(targets_, outputs.detach().cpu().numpy())
+            map = roc_auc_score(targets_, outputs.detach().cpu().numpy())
 
-            progress_bar(batch_idx, len(train_loader), 'Loss: %.3f, MAP: %.3f'
-                         % (test_loss / (len(train_loader)), map))
+            progress_bar(batch_idx, len(loader), 'Loss: %.3f, MAP: %.3f'
+                         % (test_loss / (len(loader)), map))
 
         targets_ = label_binarize(targets_epoch, classes=list(range(10)))
-        map = average_precision_score(targets_, outputs_epoch)
-        progress_bar(len(train_loader), len(train_loader), 'Loss: %.3f, MAP: %.3f'
-                     % (test_loss / (len(train_loader)), map))
-    return map
+        map = roc_auc_score(targets_, outputs_epoch)
+        progress_bar(len(loader), len(loader), 'Loss: %.3f, MAP: %.3f'
+                     % (test_loss / (len(loader)), map))
 
 
 for epoch in range(0, 100):
     train(epoch)
-    test(epoch)
+    test(epoch, train_loader_frozen, "train_set")
+    test(epoch, test_loader, "test_set")
+

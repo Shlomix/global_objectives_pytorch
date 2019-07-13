@@ -1,11 +1,16 @@
+import os, sys
+
+path = os.path.abspath(__file__ + "/../../../")
+sys.path.insert(0, path)
+
 from global_objectives.losses import PRLoss
 from examples.toy_examples.utils import *
 from examples.toy_examples.trainer import train_model
 
 
 TARGET_RECALL = 0.98
-TRAIN_ITERATIONS = 4000
-LEARNING_RATE = 0.05
+TRAIN_ITERATIONS = 30000
+LEARNING_RATE = 0.01
 GO_DUAL_RATE_FACTOR = 15.0
 NUM_CHECKPOINTS = 10
 
@@ -38,7 +43,7 @@ def main(unused_argv):
           format(tpr_1, fpr_1)
           )
 
-    criterion = PRLoss(target_recall=TARGET_RECALL, num_classes=1)
+    criterion = PRLoss(target_recall=TARGET_RECALL, num_labels=1)
     tpr_2, fpr_2, w_2, b_2, _ = train_model(data=experiment_data,
                                          use_global_objectives=True,
                                          criterion=criterion,

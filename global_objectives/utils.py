@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 
 def FloatTensor(*args):
@@ -9,21 +8,20 @@ def FloatTensor(*args):
         return torch.FloatTensor(*args)
 
 
-
 class LagrangeMultiplier(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input):
+    def forward(ctx, input, dual_factor=1.0):
         ctx.save_for_backward(input)
-        #return input.clamp(min=0)
+        ctx.dual_factor = dual_factor
         return torch.abs(input)
 
     @staticmethod
     def backward(ctx, grad_output):
-        return grad_output.neg()
+        return ctx.dual_factor*grad_output.neg(), None
 
 
-def lagrange_multiplier(x):
-    return LagrangeMultiplier.apply(x)
+def lagrange_multiplier(x, dual_factor=1.0):
+    return LagrangeMultiplier.apply(x, dual_factor)
 
 
 def one_hot_encoding(logits, targets):

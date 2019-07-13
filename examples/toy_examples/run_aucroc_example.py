@@ -3,7 +3,7 @@ import os, sys
 path = os.path.abspath(__file__ + "/../../../")
 sys.path.insert(0, path)
 
-from global_objectives.losses import TPRFPRLoss
+from global_objectives.losses import AUCROCLoss
 from examples.toy_examples.utils import *
 from examples.toy_examples.trainer import train_model
 
@@ -44,7 +44,7 @@ def main(unused_argv):
           format(tpr_1, fpr_1)
           )
 
-    criterion = TPRFPRLoss(target_fpr=TARGET_FPR, num_labels=1)
+    criterion = AUCROCLoss(fp_range_lower=0.0, fp_range_upper=1.0, num_labels=1, num_anchors=5)
 
     tpr_2, fpr_2, w_2, b_2, _ = train_model(
         data=experiment_data,

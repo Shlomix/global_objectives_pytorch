@@ -5,13 +5,14 @@ from global_objectives.base import BaseLoss
 class AUCROCLoss(BaseLoss):
 
     def __init__(self, fp_range_lower=0.0, fp_range_upper=1.0,
-                 num_classes=1, num_anchors=20):
+                 num_labels=1, num_anchors=20, dual_factor=0.1):
         nn.Module.__init__(self)
         super(AUCROCLoss, self).__init__(
-            auc=True,
+            is_auc=True,
             target_type="fp",
             target=(fp_range_lower, fp_range_upper),
-            num_classes=num_classes,
+            dual_factor=dual_factor,
+            num_labels=num_labels,
             num_anchors=num_anchors
         )
 
@@ -30,13 +31,14 @@ class AUCROCLoss(BaseLoss):
 class AUCPRLoss(BaseLoss):
 
     def __init__(self, precision_range_lower=0.0, precision_range_upper=1.0,
-                 num_classes=1, num_anchors=20):
+                 num_labels=1, num_anchors=20, dual_factor=0.1):
         nn.Module.__init__(self)
         super(AUCPRLoss, self).__init__(
-            auc=True,
+            is_auc=True,
             target_type="precision",
             target=(precision_range_lower, precision_range_upper),
-            num_classes=num_classes,
+            dual_factor=dual_factor,
+            num_labels=num_labels,
             num_anchors=num_anchors
         )
 
@@ -54,13 +56,14 @@ class AUCPRLoss(BaseLoss):
 
 class PRLoss(BaseLoss):
 
-    def __init__(self, target_recall, num_classes=1):
+    def __init__(self, target_recall, num_labels=1, dual_factor=0.1):
         nn.Module.__init__(self)
         super(PRLoss, self).__init__(
-            auc=False,
+            is_auc=False,
             target_type="recall",
             target=target_recall,
-            num_classes=num_classes,
+            dual_factor=dual_factor,
+            num_labels=num_labels,
         )
 
     def calc_lambda_term(self, lambdas, class_priors):
@@ -77,13 +80,14 @@ class PRLoss(BaseLoss):
 
 class TPRFPRLoss(BaseLoss):
 
-    def __init__(self, target_fpr, num_classes=1):
+    def __init__(self, target_fpr, num_labels=1, dual_factor=0.1):
         nn.Module.__init__(self)
         super(TPRFPRLoss, self).__init__(
-            auc=False,
+            is_auc=False,
             target_type="fpr",
             target=target_fpr,
-            num_classes=num_classes,
+            dual_factor=dual_factor,
+            num_labels=num_labels,
         )
 
     def calc_lambda_term(self, lambdas, class_priors):

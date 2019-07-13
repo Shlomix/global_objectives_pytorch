@@ -23,9 +23,12 @@ def train_model(data, use_global_objectives,
     if not use_global_objectives:
         criterion = torch.nn.BCEWithLogitsLoss()
     else:
+        criterion.to(device)
+
         params += list(criterion.parameters())
 
-    optimizer = optim.Adam(params, lr=lr)
+
+    optimizer = optim.SGD(params, lr=lr)
     checkpoint_step = train_iteration // num_checkpoints
 
     for t in range(train_iteration):
