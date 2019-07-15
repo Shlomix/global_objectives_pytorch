@@ -60,18 +60,21 @@ net = vgg.VGG16(num_classes=10)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-use_ce = True
+use_ce = False
 
 
-if use_ce:
-    criterion = nn.BCEWithLogitsLoss()
-else:
-    criterion = AUCROCLoss(num_labels=10, num_anchors=50, dual_factor=1.0)
 
-params = list(net.parameters()) + list(criterion.parameters())
+criterion = AUCROCLoss(num_labels=10, num_anchors=50, dual_factor=1.0)
 
-optimizer_net = optim.SGD(params, lr=1e-2)
+params_net = list(net.parameters()) + [list(criterion.parameters())[0]]
+params_lambda = [list(criterion.parameters())[1]]
+
+
+optimizer_net = optim.SGD(params_net, lr=1e-2)
+optimizer_lambda = optim.SGD(params_lambda, lr=1e-3)
+
 scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=30, gamma=0.5)
+scheduler_lambda = optim.lr_scheduler.StepLR(optimizer_net, step_size=30, gamma=0.5)
 
 
 net = net.to(device)
@@ -90,6 +93,7 @@ def train(epoch):
     train_loss = 0
 
     scheduler_net.step()
+    scheduler_lambda.step()
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
 
@@ -100,12 +104,14 @@ def train(epoch):
 
 
         optimizer_net.zero_grad()
+        optimizer_lambda.zero_grad()
+
         outputs = net(inputs).squeeze()
-        if use_ce:
-            targets = one_hot_encoding(logits=outputs, targets=targets)
+
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer_net.step()
+        optimizer_lambda.step()
 
         train_loss += loss.item()
 
@@ -149,12 +155,12 @@ def test(epoch, loader, label):
             targets_ = label_binarize(targets.cpu().numpy(), classes=list(range(10)))
             map = roc_auc_score(targets_, outputs.detach().cpu().numpy())
 
-            progress_bar(batch_idx, len(loader), 'Loss: %.3f, MAP: %.3f'
+            progress_bar(batch_idx, len(loader), 'Loss: %.3f, ROC: %.3f'
                          % (test_loss / (len(loader)), map))
 
         targets_ = label_binarize(targets_epoch, classes=list(range(10)))
         map = roc_auc_score(targets_, outputs_epoch)
-        progress_bar(len(loader), len(loader), 'Loss: %.3f, MAP: %.3f'
+        progress_bar(len(loader), len(loader), 'Loss: %.3f, ROC: %.3f'
                      % (test_loss / (len(loader)), map))
 
 

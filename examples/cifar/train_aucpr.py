@@ -47,7 +47,7 @@ train_loader = torch.utils.data.DataLoader(train_set, batch_size=256,
 test_set = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=test_transforms)
 
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=512,
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=256,
                                           shuffle=False, num_workers=2)
 
 train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
@@ -56,7 +56,7 @@ train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
 train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=256,
                                            shuffle=False, num_workers=2)
 
-net = vgg.VGG16(num_classes=10)
+net = vgg.VGG11(num_classes=10)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -65,11 +65,11 @@ use_ce = False
 if use_ce:
     criterion = nn.BCEWithLogitsLoss()
 else:
-    criterion = AUCPRLoss(num_labels=10, num_anchors=5, dual_factor=2.0)
+    criterion = AUCPRLoss(num_labels=10, num_anchors=10, dual_factor=2.0)
 
 params = list(net.parameters()) + list(criterion.parameters())
 
-optimizer_net = optim.SGD(params, lr=1e-1)
+optimizer_net = optim.Adam(params, lr=1e-2)
 scheduler_net = optim.lr_scheduler.StepLR(optimizer_net, step_size=30, gamma=0.5)
 
 
@@ -157,7 +157,7 @@ def test(epoch, loader, label):
                      % (test_loss / (len(loader)), map))
 
 
-for epoch in range(0, 100):
+for epoch in range(0, 60):
     train(epoch)
     test(epoch, train_loader_frozen, "train_set")
     test(epoch, test_loader, "test_set")

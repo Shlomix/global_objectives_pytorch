@@ -69,17 +69,20 @@ class BaseLoss(nn.Module):
             weights.unsqueeze_(-1)
 
         # class_priors' shape = [C]
-        class_priors = BaseLoss.calc_class_priors(labels, weights=weights)
+        class_priors, normalize = BaseLoss.calc_class_priors(labels, weights=weights)
         # lambdas' shape = [C, K] or [C]
         lambdas = utils.lagrange_multiplier(self.lambdas, self.dual_factor)
         # positive(negative)_weights' shape = [C, K]
         positive_weights, negative_weights = self.calc_pos_neg_weights(lambdas)
+        #positive_weights = torch.div(positive_weights, normalize)
+        #negative_weights = torch.div(negative_weights, normalize)
+
         # lambda_term's shape = [C, K] (auc) or [C]
         lambda_term = self.calc_lambda_term(lambdas, class_priors)
 
         if self.is_auc:
             # hinge_loss's shape = [N,C,K]
-            hinge_loss = self.calc_hinge_loss(
+            hinge_loss = self.calc_ce_loss(
                 labels.unsqueeze(-1),
                 logits.unsqueeze(-1) - self.biases,
                 positive_weights=positive_weights,
@@ -129,7 +132,7 @@ class BaseLoss(nn.Module):
             weighted_label_counts + positive_pseudocount,
             weight_sum + positive_pseudocount + negative_pseudocount,
         )
-        return class_priors
+        return class_priors, weight_sum + positive_pseudocount + negative_pseudocount
 
     @staticmethod
     def calc_hinge_loss(labels, logits, positive_weights=1.0, negative_weights=1.0):
@@ -175,6 +178,44 @@ class BaseLoss(nn.Module):
                 positive_term * positive_weights
                 + negative_term * negative_weights
         )
+
+    @staticmethod
+    def calc_ce_loss(labels, logits, positive_weights=1.0, negative_weights=1.0):
+
+        if not torch.is_tensor(positive_weights) and not np.isscalar(positive_weights):
+                raise ValueError(
+                    "positive_weights must be either a scalar or a tensor"
+                )
+
+        if not torch.is_tensor(negative_weights) and not np.isscalar(negative_weights):
+                raise ValueError(
+                    "negative_weights must be either a scalar or a tensor"
+                )
+
+        if torch.is_tensor(positive_weights) and np.isscalar(negative_weights):
+            negative_weights = FloatTensor(positive_weights.shape).fill_(negative_weights)
+
+        elif torch.is_tensor(negative_weights) and np.isscalar(positive_weights):
+            positive_weights = FloatTensor(negative_weights.shape).fill_(positive_weights)
+
+        # If both are tensors to begin with.
+        elif positive_weights.size() != negative_weights.size():
+            raise ValueError(
+                "shape of positive_weights and negative_weights "
+                "must be the same! "
+                "shape of positive_weights is {0}, "
+                "but shape of negative_weights is {1}"
+                .format(positive_weights.size(), negative_weights.size())
+            )
+
+        softerm_plus = (-logits).clamp(min=0) + torch.log(1.0 + torch.exp(-torch.abs(logits)))
+        weight_dependent_factor = (
+            negative_weights + (positive_weights - negative_weights)*labels
+        )
+
+        return (negative_weights * (logits - labels * logits) +
+                weight_dependent_factor * softerm_plus)
+
 
 
     @staticmethod
