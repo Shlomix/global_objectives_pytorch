@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 from sklearn.metrics import average_precision_score
 from global_objectives.losses import AUCPRLoss
 from global_objectives.utils import one_hot_encoding
-from examples.cifar.networks import vgg
+from examples.cifar.networks import vgg, custom_cnn
 from examples.cifar.misc import progress_bar
 from sklearn.preprocessing import label_binarize
 
@@ -41,22 +41,23 @@ test_transforms = transforms.Compose([
 train_set = torchvision.datasets.CIFAR10(root='./data', train=True,
                                          download=True, transform=train_transforms)
 
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=256,
+train_loader = torch.utils.data.DataLoader(train_set, batch_size=512,
                                            shuffle=True, num_workers=2)
 
 test_set = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=test_transforms)
 
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=256,
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=512,
                                           shuffle=False, num_workers=2)
 
 train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
                                          download=True, transform=test_transforms)
 
-train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=256,
+train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=512,
                                            shuffle=False, num_workers=2)
 
-net = vgg.VGG11(num_classes=10)
+#net = vgg.VGG11(num_classes=10)
+net = custom_cnn.CustomCNN()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -65,7 +66,7 @@ use_ce = False
 if use_ce:
     criterion = nn.BCEWithLogitsLoss()
 else:
-    criterion = AUCPRLoss(num_labels=10, num_anchors=10, dual_factor=2.0)
+    criterion = AUCPRLoss(num_labels=10, num_anchors=20, dual_factor=10.0)
 
 params = list(net.parameters()) + list(criterion.parameters())
 
@@ -157,7 +158,7 @@ def test(epoch, loader, label):
                      % (test_loss / (len(loader)), map))
 
 
-for epoch in range(0, 60):
+for epoch in range(0, 52):
     train(epoch)
     test(epoch, train_loader_frozen, "train_set")
     test(epoch, test_loader, "test_set")

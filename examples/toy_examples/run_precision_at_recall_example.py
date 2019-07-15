@@ -43,7 +43,7 @@ def main(unused_argv):
           format(tpr_1, fpr_1)
           )
 
-    criterion = PRLoss(target_recall=TARGET_RECALL, num_labels=1)
+    criterion = PRLoss(target_recall=TARGET_RECALL, num_labels=1, dual_factor=1.0)
     tpr_2, fpr_2, w_2, b_2, _ = train_model(data=experiment_data,
                                          use_global_objectives=True,
                                          criterion=criterion,

@@ -121,7 +121,7 @@ class BaseLoss(nn.Module):
                           class_priors=None,
                           weights=None,
                           positive_pseudocount=1.0,
-                          negative_pseudocount=1.0):
+                          negative_pseudocount=9.0):
 
         if class_priors is not None:
             return class_priors
@@ -132,7 +132,7 @@ class BaseLoss(nn.Module):
             weighted_label_counts + positive_pseudocount,
             weight_sum + positive_pseudocount + negative_pseudocount,
         )
-        return class_priors, weight_sum + positive_pseudocount + negative_pseudocount
+        return weighted_label_counts, weight_sum + positive_pseudocount + negative_pseudocount
 
     @staticmethod
     def calc_hinge_loss(labels, logits, positive_weights=1.0, negative_weights=1.0):

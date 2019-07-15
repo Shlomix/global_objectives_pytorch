@@ -43,9 +43,7 @@ class AUCPRLoss(BaseLoss):
         )
 
     def calc_lambda_term(self, lambdas, class_priors):
-        lambda_term = class_priors.unsqueeze(-1) * (
-            lambdas * (1.0 - self.target_values)
-        )
+        lambda_term = lambdas * (1.0 - self.target_values) * class_priors.unsqueeze(-1)
         return lambda_term
 
     def calc_pos_neg_weights(self, lambdas):
