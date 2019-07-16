@@ -17,6 +17,7 @@ from global_objectives.utils import one_hot_encoding
 from examples.cifar.networks import vgg, custom_cnn
 from examples.cifar.misc import progress_bar
 from sklearn.preprocessing import label_binarize
+from examples.cifar.cifar_10_data_loader import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -26,42 +27,17 @@ CLASSES = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 
 CLASS_ID = 2
 
-train_transforms = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
 
-test_transforms = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
+train_loader, val_loader = get_train_valid_loader(data_dir='./data', batch_size=512, augment=True, random_seed=42,)
+test_loader = get_test_loader(data_dir='./data', batch_size=512)
 
-train_set = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                         download=True, transform=train_transforms)
-
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=512,
-                                           shuffle=True, num_workers=2)
-
-test_set = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                        download=True, transform=test_transforms)
-
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=512,
-                                          shuffle=False, num_workers=2)
-
-train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                         download=True, transform=test_transforms)
-
-train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=512,
-                                           shuffle=False, num_workers=2)
 
 #net = vgg.VGG11(num_classes=10)
 net = custom_cnn.CustomCNN()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-use_ce = False
+use_ce = True
 
 if use_ce:
     criterion = nn.BCEWithLogitsLoss()
@@ -96,8 +72,6 @@ def train(epoch):
         targets = targets.long()
 
         inputs, targets = inputs.to(device), targets.to(device)
-
-
 
         optimizer_net.zero_grad()
         outputs = net(inputs).squeeze()
@@ -160,6 +134,7 @@ def test(epoch, loader, label):
 
 for epoch in range(0, 100):
     train(epoch)
-    test(epoch, train_loader_frozen, "train_set")
+    test(epoch, train_loader, "train_set")
+    test(epoch, val_loader, "val_set")
     test(epoch, test_loader, "test_set")
 
