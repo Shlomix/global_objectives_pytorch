@@ -20,8 +20,8 @@ class LagrangeMultiplier(torch.autograd.Function):
         return ctx.dual_factor*grad_output.neg(), None
 
 
-def lagrange_multiplier(x, dual_factor=1.0):
-    return LagrangeMultiplier.apply(x, dual_factor)
+def lagrange_multiplier(_lambda, dual_factor=1.0):
+    return LagrangeMultiplier.apply(_lambda, dual_factor)
 
 
 def one_hot_encoding(logits, targets):
