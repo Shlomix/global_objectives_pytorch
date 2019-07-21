@@ -31,45 +31,22 @@ class BaseLoss(nn.Module):
                  num_anchors=20):
         nn.Module.__init__(self)
 
-        if not isinstance(num_labels, int):
-            raise TypeError("num_labels must be an integer.")
-        if num_labels < 1:
-            raise ValueError("num_labels must be at least one.")
+        base_utils.validate_init_args(
+            at_target=at_target,
+            at_target_type=at_target_type,
+            num_labels=num_labels,
+            dual_factor=dual_factor,
+            is_auc=is_auc,
+            num_anchors=num_anchors
+        )
+
         self.num_labels = num_labels
-
-        if not isinstance(dual_factor, float):
-            raise TypeError("dual factor must be a float.")
         self.dual_factor = dual_factor
-
-        if at_target_type not in ["tpr", "fpr", "precision", "recall"]:
-            raise TypeError(
-                "at_target_type must be one of the following:"
-                "(tpr, fpr, precision, recall)."
-            )
         self.at_target_type = at_target_type
         self.is_auc = is_auc
 
         if self.is_auc:
-            if not isinstance(num_anchors, int):
-                raise TypeError("num_anchors must be an integer.")
-            if num_anchors < 1:
-                raise ValueError("num_anchors must be at least one.")
             self.num_anchors = num_anchors
-
-            if not isinstance(at_target, tuple):
-                raise TypeError("at_target must be a tuple.")
-            if len(at_target) != 2:
-                raise TypeError("at_target must be a tuple of size 2")
-            if not isinstance(at_target[0], float):
-                raise TypeError("at_target[0] must be a float.")
-            if not isinstance(at_target[1], float):
-                raise TypeError("at_target[1] must be a float.")
-            if not 0.0 <= at_target[0] <= at_target[1] <= 1.0:
-                raise ValueError(
-                    "at_target values must follow"
-                    "0 <= {} <= {} <= 1."
-                    .format(at_target[0], at_target[1])
-                )
             self.at_target_range = at_target
 
             _at_target_values, self.delta = base_utils.build_anchors(
@@ -85,13 +62,6 @@ class BaseLoss(nn.Module):
                 )
             )
         else:
-            if not isinstance(at_target, float):
-                raise TypeError("at_target must be a float.")
-            if not 0 <= at_target <= 1:
-                raise ValueError(
-                    "at_target mustn't be smaller than zero "
-                    "or greater than 1."
-                )
             self.at_target = at_target
             self.biases = nn.Parameter(
                 torch.FloatTensor(self.num_labels).zero_()
@@ -104,19 +74,19 @@ class BaseLoss(nn.Module):
 
     def forward(self,
                 logits,
-                targets,
+                labels,
                 class_priors=None,
                 weights=None,
                 reduce=True,
                 size_average=True):
 
         # logits priors' shape = [N, C]
-        # after "prepare_logits_labels_weights() method":
+        # after "prepare_logits_labels_weights()" method:
         #     labels' shape = [N, C]
         #     weights' shape = [N, 1] or [N, C]
         logits, labels, weights = \
             base_utils.validate_prepare_logits_labels_weights(
-                logits=logits, targets=targets,
+                logits=logits, labels=labels,
                 weights=weights, num_labels=self.num_labels
         )
         # labels priors' shape = [C]
@@ -138,7 +108,7 @@ class BaseLoss(nn.Module):
 
         # positive(negative)_weights' shape = [C, K] or [C]
         positive_weights, negative_weights = self.get_positive_negative_weights(
-            lambdas=self.lambdas,
+            lambdas=lambdas,
             targets=self.at_target_values if self.is_auc else self.at_target
         )
 
@@ -189,6 +159,54 @@ class BaseLoss(nn.Module):
             return loss.mean()
         else:
             return loss.sum()
+
+    @staticmethod
+    def _validate_init_params(at_target,
+                              at_target_type,
+                              num_labels,
+                              dual_factor,
+                              is_auc,
+                              num_anchors):
+
+        if not isinstance(num_labels, int):
+            raise TypeError("num_labels must be an integer.")
+        if num_labels < 1:
+            raise ValueError("num_labels must be at least one.")
+
+        if not isinstance(dual_factor, float):
+            raise TypeError("dual factor must be a float.")
+
+        if is_auc:
+            if not isinstance(num_anchors, int):
+                raise TypeError("num_anchors must be an integer.")
+            if num_anchors < 1:
+                raise ValueError("num_anchors must be at least one.")
+            if not isinstance(at_target, tuple):
+                raise TypeError("at_target must be a tuple.")
+            if len(at_target) != 2:
+                raise TypeError("at_target must be a tuple of size 2")
+            if not isinstance(at_target[0], float):
+                raise TypeError("at_target[0] must be a float.")
+            if not isinstance(at_target[1], float):
+                raise TypeError("at_target[1] must be a float.")
+            if not 0.0 <= at_target[0] <= at_target[1] <= 1.0:
+                raise ValueError(
+                    "{} values must follow"
+                    "0 <= {} <= {} <= 1.".format(
+                        at_target_type,
+                        at_target[0], at_target[1]
+                    )
+                )
+        else:
+            if not isinstance(at_target, float):
+                raise TypeError("{} must be a float.".format(
+                    at_target_type)
+                )
+            if not 0 <= at_target <= 1:
+                raise ValueError(
+                    "at_target mustn't be smaller than zero "
+                    "or greater than 1."
+                )
 
     @staticmethod
     def get_lambda_term(lambdas, targets, label_priors):

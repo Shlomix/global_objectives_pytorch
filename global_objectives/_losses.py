@@ -4,7 +4,8 @@ from global_objectives._base import BaseLoss
 
 class AUCROCLoss(BaseLoss):
 
-    def __init__(self, fp_range_lower=0.0, fp_range_upper=1.0,
+    def __init__(self,
+                 fp_range_lower=0.0, fp_range_upper=1.0,
                  num_labels=1, num_anchors=20, dual_factor=0.1):
         nn.Module.__init__(self)
         super(AUCROCLoss, self).__init__(

@@ -14,7 +14,7 @@ def train_model(data, use_global_objectives,
     else:
         device = torch.device('cpu')
 
-    w = torch.tensor([1.0, 1.0],  requires_grad=True, device=device)
+    w = torch.tensor([-1.0, -1.0],  requires_grad=True, device=device)
     b = torch.tensor([0.0], requires_grad=True, device=device)
     x = torch.tensor(data['train_data'], requires_grad=False, device=device).float().cuda()
     labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float().cuda()
