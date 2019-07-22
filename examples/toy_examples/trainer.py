@@ -16,17 +16,15 @@ def train_model(data, use_global_objectives,
 
     w = torch.tensor([-1.0, -1.0],  requires_grad=True, device=device)
     b = torch.tensor([0.0], requires_grad=True, device=device)
-    x = torch.tensor(data['train_data'], requires_grad=False, device=device).float().cuda()
-    labels = torch.tensor(data['train_labels'], requires_grad=False, device=device).float().cuda()
+    x = torch.tensor(data['train_data'], requires_grad=False, dtype=torch.float, device=device)
+    labels = torch.tensor(data['train_labels'], requires_grad=False, dtype=torch.float, device=device)
 
     params = [w, b]
     if not use_global_objectives:
-        criterion = torch.nn.BCEWithLogitsLoss()
+        criterion = torch.nn.BCEWithLogitsLoss().to(device)
     else:
-        criterion.to(device)
-
+        criterion = criterion.to(device)
         params += list(criterion.parameters())
-
 
     optimizer = optim.SGD(params, lr=lr)
     checkpoint_step = train_iteration // num_checkpoints

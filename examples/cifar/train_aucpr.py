@@ -13,7 +13,6 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from sklearn.metrics import average_precision_score
 from global_objectives.losses import AUCPRLoss
-from global_objectives.utils import one_hot_encoding
 from examples.cifar.networks import vgg, custom_cnn
 from examples.cifar.misc import progress_bar
 from sklearn.preprocessing import label_binarize
@@ -56,7 +55,6 @@ train_set_frozen = torchvision.datasets.CIFAR10(root='./data', train=True,
 train_loader_frozen = torch.utils.data.DataLoader(train_set_frozen, batch_size=512,
                                            shuffle=False, num_workers=2)
 
-#net = vgg.VGG11(num_classes=10)
 net = custom_cnn.CustomCNN()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -64,7 +62,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 use_ce = False
 
 if use_ce:
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss()
 else:
     criterion = AUCPRLoss(num_labels=10, num_anchors=20, dual_factor=2.0)
 
@@ -82,6 +80,15 @@ if device == 'cuda':
     cudnn.benchmark = True
 
 
+def one_hot_encoding(logits, targets):
+    N, C = logits.size()
+    _targets = targets.unsqueeze(-1)
+    if C > 1:
+        labels = torch.zeros_like(logits).scatter(1, _targets.long().data, 1)
+    else:
+        labels = _targets
+    return labels
+
 
 def train(epoch):
     print('\nTrain Epoch: %d' % epoch)
@@ -97,11 +104,9 @@ def train(epoch):
 
         inputs, targets = inputs.to(device), targets.to(device)
 
-
-
         optimizer_net.zero_grad()
-        outputs = net(inputs).squeeze()
-        if use_ce:
+        outputs = net(inputs)
+        if not use_ce:
             targets = one_hot_encoding(logits=outputs, targets=targets)
         loss = criterion(outputs, targets)
         loss.backward()
@@ -116,9 +121,7 @@ def train(epoch):
                      % (train_loss / (len(train_loader)), map))
 
 
-def test(epoch, loader, label):
-    global best_map
-
+def _test(epoch, loader, label):
     print('\nTesting {} Epoch: {}'.format(label, epoch))
     net.eval()
     criterion.eval()
@@ -131,8 +134,8 @@ def test(epoch, loader, label):
 
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs = net(inputs).squeeze()
-            if use_ce:
+            outputs = net(inputs)
+            if not use_ce:
                 targets = one_hot_encoding(logits=outputs, targets=targets)
 
             loss = criterion(outputs, targets)
@@ -160,6 +163,6 @@ def test(epoch, loader, label):
 
 for epoch in range(0, 100):
     train(epoch)
-    test(epoch, train_loader_frozen, "train_set")
-    test(epoch, test_loader, "test_set")
+    _test(epoch, train_loader_frozen, "train_set")
+    _test(epoch, test_loader, "test_set")
 

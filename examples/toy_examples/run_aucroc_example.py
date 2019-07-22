@@ -29,6 +29,8 @@ def main(unused_argv):
     experiment_data = create_training_and_eval_data_for_experiment(
         **EXPERIMENT_DATA_CONFIG)
 
+    print('\n\n\n### Training with cross entropy loss:')
+
     tpr_1, fpr_1, w_1, b_1, threshold = train_model(
         data=experiment_data,
         use_global_objectives=False,
@@ -40,11 +42,13 @@ def main(unused_argv):
         num_checkpoints=NUM_CHECKPOINTS
     )
 
-    print('cross_entropy_loss tpr at requested fpr is {:.2f}@{:.2f}\n'.
-          format(tpr_1, fpr_1)
-          )
+    print('cross_entropy_loss tpr at requested fpr is '
+          '{:.2f}@{:.2f}\n'.format(tpr_1, fpr_1))
 
-    criterion = AUCROCLoss(fp_range_lower=0.0, fp_range_upper=1.0, num_labels=1, num_anchors=5)
+    criterion = AUCROCLoss(fp_range_lower=0.0, fp_range_upper=1.0,
+                           num_labels=1, num_anchors=5)
+
+    print('\n\n\n### Training with AUCPR loss:')
 
     tpr_2, fpr_2, w_2, b_2, _ = train_model(
         data=experiment_data,
@@ -58,10 +62,8 @@ def main(unused_argv):
         num_checkpoints=NUM_CHECKPOINTS
     )
 
-    print('true_positives_at_false_positives_loss tpr '
-          'at requested fpr is {:.2f}@{:.2f}'.
-          format(tpr_2, fpr_2)
-          )
+    print('auc_roc_loss tpr at requested fpr is '
+          '{:.2f}@{:.2f}'.format(tpr_2, fpr_2))
 
     plot_results(
         data=experiment_data,
