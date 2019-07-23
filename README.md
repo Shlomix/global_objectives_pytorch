@@ -1,4 +1,4 @@
-# Global Objectives
+# Global Objectives For PyTorch
 The Global Objectives library provides PyTorch loss layers that optimize
 directly for a variety of objectives including true positive at false positive,
 AUC, recall at precision, and more.
