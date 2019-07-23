@@ -1,11 +1,6 @@
-import os, sys
-
-path = os.path.abspath(__file__ + "/../../../")
-sys.path.insert(0, path)
-
 from global_objectives.losses import AUCROCLoss
-from examples.toy_examples.utils import *
-from examples.toy_examples.trainer import train_model
+from utils import *
+from trainer import train_model
 
 
 TARGET_FPR = 0.01
