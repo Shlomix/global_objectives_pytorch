@@ -150,5 +150,8 @@ class BaseLoss(nn.Module):
     def get_positive_negative_weights(lambdas, targets):
         raise NotImplementedError
 
+    def get_labmdas(self):
+        return [self.lambdas]
 
-
+    def get_biases(self):
+        return [self.biases]
