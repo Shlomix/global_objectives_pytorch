@@ -13,8 +13,8 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from sklearn.metrics import average_precision_score
 from global_objectives.losses import AUCPRLoss
-from examples.cifar10.networks import vgg, custom_cnn
-from examples.cifar10.misc import progress_bar
+from networks import vgg, custom_cnn
+from misc import progress_bar
 from sklearn.preprocessing import label_binarize
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'

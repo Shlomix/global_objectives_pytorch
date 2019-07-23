@@ -43,7 +43,7 @@ def main(unused_argv):
     criterion = AUCROCLoss(fp_range_lower=0.0, fp_range_upper=1.0,
                            num_labels=1, num_anchors=5)
 
-    print('\n\n\n### Training with AUCPR loss:')
+    print('\n\n\n### Training with AUCROC loss:')
 
     tpr_2, fpr_2, w_2, b_2, _ = train_model(
         data=experiment_data,
