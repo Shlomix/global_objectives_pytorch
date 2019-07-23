@@ -64,13 +64,9 @@ class BaseLoss(nn.Module):
 
         self.biases = nn.Parameter(
             torch.zeros(self.required_shape)
-            #torch.FloatTensor(self.required_shape).zero_()
         )
         self.lambdas = nn.Parameter(
             torch.ones(self.required_shape)
-            #torch.FloatTensor(self.required_shape).data.fill_(
-            # 1.0
-            # )
         )
 
     def forward(self, logits, labels,
@@ -150,8 +146,10 @@ class BaseLoss(nn.Module):
     def get_positive_negative_weights(lambdas, targets):
         raise NotImplementedError
 
-    def get_labmdas(self):
+    @property
+    def labmda_parameters(self):
         return [self.lambdas]
 
-    def get_biases(self):
+    @property
+    def bias_parameters(self):
         return [self.biases]

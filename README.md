@@ -1,4 +1,4 @@
-# Global Objectives
+# Global Objectives For PyTorch
 The Global Objectives library provides PyTorch loss layers that optimize
 directly for a variety of objectives including true positive at false positive,
 AUC, recall at precision, and more.
@@ -70,7 +70,7 @@ called dual variables or Lagrange multipliers to enforce the desired constraint
 These dual variables are created and initialized internally by the loss
 functions, and are updated during training by the same optimizer used for the
 model's other variables. The dual variables can be found using the method 
-the key `criterion.get_labmdas()`.
+the key `criterion.labmda_parameters()`.
 
 ## Loss Function Arguments
 The following arguments are common to all loss functions in the library, and are
