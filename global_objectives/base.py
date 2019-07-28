@@ -70,7 +70,7 @@ class BaseLoss(nn.Module):
         )
 
     def forward(self, logits, labels,
-                class_priors=None, weights=None,
+                label_priors=None, weights=None,
                 reduce=True, size_average=True):
 
         logits, labels, weights = \
@@ -79,8 +79,9 @@ class BaseLoss(nn.Module):
                 weights=weights, num_labels=self.num_labels
         )
 
-        label_counts, _ = utils.build_label_counts_priors(
-            labels=labels, weights=weights
+        label_priors = utils.build_label_priors(
+            labels=labels, weights=weights,
+            label_priors=label_priors
         )
 
         lambdas = lagrange_multiplier(
@@ -95,14 +96,14 @@ class BaseLoss(nn.Module):
 
         else:
             _targets = self.at_target
-            _labels = labels,
-            _logits = logits,
+            _labels = labels
+            _logits = logits
             _weights = weights
 
         lambda_term = self.get_lambda_term(
             lambdas=lambdas,
             targets=_targets,
-            label_priors=label_counts
+            label_priors=label_priors
         )
 
         positive_weights, negative_weights = \

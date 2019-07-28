@@ -50,8 +50,8 @@ def validate_init_args(at_target, at_target_type, num_labels,
             )
 
 
-def validate_prepare_logits_labels_weights(
-        logits, labels, weights, num_labels):
+def validate_prepare_logits_labels_weights(logits, labels,
+                                           weights, num_labels):
 
     if logits.dim() == 1:
         logits = logits.unsqueeze(-1)
@@ -107,10 +107,8 @@ def validate_prepare_logits_labels_weights(
     return logits, labels, weights
 
 
-def prepare_positive_negative_weights(positive_weights,
-                                      negative_weights,
-                                      required_shape,
-                                      device):
+def prepare_positive_negative_weights(positive_weights, negative_weights,
+                                      required_shape, device):
 
     if np.isscalar(positive_weights):
         positive_weights = torch.empty(required_shape).fill_(
@@ -137,14 +135,14 @@ def build_anchors(target_range, num_anchors):
     return torch.FloatTensor(target_values), delta
 
 
-def build_label_counts_priors(labels,
-                              label_priors=None,
-                              weights=None,
-                              positive_pseudocount=1.0,
-                              negative_pseudocount=1.0):
+def build_label_priors(labels, label_priors=None, weights=None,
+                       positive_pseudocount=1.0, negative_pseudocount=1.0):
 
     if label_priors is not None:
-        return label_priors
+        if label_priors.size() != (labels.size()[1],):
+            raise ValueError("label priors must")
+        else:
+            return label_priors
 
     weighted_label_counts = (weights * labels).sum(0)
     weight_sum = weights.sum(0)
@@ -152,7 +150,7 @@ def build_label_counts_priors(labels,
         weighted_label_counts + positive_pseudocount,
         weight_sum + positive_pseudocount + negative_pseudocount,
     )
-    return weighted_label_counts, label_priors
+    return label_priors
 
 
 def weighted_hinge_loss(labels, logits,
